@@ -1,0 +1,277 @@
+\documentclass{article}
+\usepackage{amsmath}
+\usepackage{algpseudocode}
+\usepackage{algorithm}
+\usepackage[margin=1.0in]{geometry}
+\title{SPR-based Error Estimation}
+\author{Dan Ibanez and Brian Granzow}
+\date{Jun 21, 2014}
+\begin{document}
+\maketitle
+
+\section{Overview}
+An SPR-based error estimation procedure is defined in detail
+in Jie Wan's thesis.
+We have reimplemented this system using the latest APF
+libraries and it supports the Albany adaptive cycle.
+This document details the inner workings of this estimator.
+
+From a high level, the SPR-based error estimator works by
+recovering a $p$-order field from what is essentially
+a $(p-1)$-order input field, then it computes the
+error at each element as a function of the difference
+between the input (less accurate) and output
+(hopefully more accurate) fields. 
+
+The input to SPR is actually a ``field" $\epsilon$ that contains values
+at integration points rather than nodes.
+This is typically the result of some kind of gradient computation
+$\epsilon = \nabla f$ from a $p$-order field $f$.
+In mechanics applications, $\epsilon$ is a strain or stress quantity
+evaluated at integration points.
+Note that the choice of integration points is independent of
+anything else, although typically they should be chosen such
+that they can integrate a field of order $p$.
+
+\section{Field Recovery}
+The SPR recovery process generates a $p$-order field $\epsilon^*$ which
+has values at the nodes for the same quantity that the
+input $\epsilon$ provides at integration points.
+
+This recovery is done node-by-node, and the value at each
+node is recovered by fitting an ordinary $p$-order polynomial
+$q (x, y, z) = v$ using input data $v_i = \epsilon(x_i, y_i, z_i)$
+at integration points $(x_i,y_i,z_i)$ around the node.
+The collection of integration points is done by building
+a ``patch" of mesh elements around the node.
+
+Fitting a polynomial from data is done by solving a least-squares linear
+system $Ac \approx b$.
+The solution $c$ should minimize $\|Ac - b\|$, and represents
+the coefficients of the polynomial $q$.
+For example, if $p=1$:
+\[q(x,y,z) = c_0 + c_1 x + c_2 y + c_3 z \]
+
+Each data point becomes a row of the linear system:
+
+\[q(x_i,y_i,z_i) = c_0 + c_1 x_i + c_2 y_i + c_3 z_i \approx v_i \]
+
+Which can be expressed as a dot product:
+
+\[q(x_i,y_i,z_i) = (1,x_i,y_i,z_i)(c_0,c_1,c_2,c_3)^T \approx v_i \]
+
+Which yields the matrix equation:
+
+\[\begin{bmatrix}
+1 & x_0 & y_0 & z_0 \\
+1 & x_1 & y_1 & z_1 \\
+1 & x_2 & y_2 & z_2 \\
+\text{...}
+\end{bmatrix}
+\begin{bmatrix} c_0 \\ c_1 \\ c_2 \\ c_3 \end{bmatrix}
+\approx
+\begin{bmatrix} v_0 \\ v_1 \\ v_2 \\ ... \end{bmatrix}
+\]
+
+The matrix $A$ on the left is then $m\times n$ where $m$
+is the number of sample points and $n$ is the number of
+polynomial coefficients.
+We would rather have an over-determined answer than
+an under-determined one, so we require $m \geq n$.
+Typically, we get $m > n$, in which case the solution
+is not exact and we must choose coefficients to minimize
+
+\[ \left( \sum_{i=0}^{m-1} (q(x_i,y_i,z_i) - v_i)^2 \right)^\frac12 \]
+
+To solve the least squares problem $Ac \approx v$, we
+use a QR factorization approach.
+We use Householder reflectors to obtain a decomposition
+
+\[QR = A, QQ^T = I, QRc \approx v, Rc = Q^Tv\]
+
+Where R is upper triangular and Q is stored implicitly
+as a set of Householder vectors.
+This allows us to compute $y = Q^Tv$ implicitly
+(which is more accurate)
+and then solve $Rc = y$, which is an $n\times n$ problem,
+with back substitution.
+
+However, the solution $c$ can only be accurately found
+if the matrix $A$ is well-conditioned, i.e. rank$(A) = n$.
+We must be concerned with this because least-squares polynomial
+fitting is well-known for producing ill-conditioned matrices.
+The QR solver provides a single point of inspection where
+a division by zero will occur if $A$ is ill-conditioned,
+so it will signal a failure in this case.
+
+During recovery, the sample points consist of all
+integration points in the elements of the patch.
+Therefore, we must increase the number of elements
+in the patch so long as the resulting $A$ does
+not satisfy the conditions $m \geq n$ and rank$(A) = n$.
+
+The elements $S$ in the patch are collected as follows
+until those conditions are met:
+
+\begin{algorithm}
+\caption{Patch building algorithm}
+\begin{algorithmic}
+\State let $o$ be the mesh entity to which the node is associated.
+\State set $S$ to be the elements adjacent to $o$ $(S \gets o\{M^3\})$.
+\Loop
+\For{$d$ from 2 down to 0}
+\State add the elements adjacent by $d$-dimension entities to $S$
+$(S \gets S\{M^d\}\{M^3\})$.
+\If{$S$ has enough elements}
+\State \Return $S$
+\EndIf
+\EndFor
+\EndLoop
+\end{algorithmic}
+\end{algorithm}
+
+Finally, once the patch is obtained, the integration points
+$(x_i,y_i,z_i)$ and the field values $\epsilon(x_i,y_i,z_i) = v_i$
+from the input are used to build $A$ and $v$.
+Note that the field values $v_i$ may be tensors instead of scalars,
+in which case the analysis is solved one component at a time.
+Each component $j$ forms a set of scalar values $v^{(j)} = (v_0^{(j)},...,v_m^{(j)})^T$
+and results in a set of polynomial coefficients $c^{(j)}$
+that minimize $\|Ac^{(j)} - v^{(j)}\|$ and define a polynomial $q^{(j)}(x,y,z)$.
+We then evaluate this polynomial at the location $(x_a,y_a,z_a)$
+of the node to obtain the field component value at
+that node: $\epsilon^*(x_a,y_a,z_a)^{(j)} = \rho^{(j)}(x_a,y_a,z_a)$.
+One can also think of the coefficients $c$ being
+tensors.
+Note that the matrix $A$ remains the same for each component,
+only the right hand side $v^{(j)}$ changes to give a different
+$c^{(j)}$. This allows us to only compute the QR decomposition
+of A once and only repeat the computations of $y=Q^Tv^{(j)}$
+and $Rc^{(j)}=y$.
+
+\section{Error Estimation}
+
+A per-element scalar error estimate
+$\|e_\epsilon\|_e$ is computed using the
+norm of the integrated difference between
+direct and recovered gradient fields.
+\[e_\epsilon=\epsilon - \epsilon^*\]
+The current implementation uses entry-wise L2 norms on
+3x3 matrices, which seems to agree with Wan's thesis.
+The following notations describe the L2 norm integration
+over an element and over the whole mesh:
+
+\[\|A\|_e=
+\left(
+\int_{\Omega^e} A : A d\Omega
+\right)^\frac12,
+\|A\|=
+\left(
+\sum_{e=1}^{n_e}
+\int_{\Omega^e} A : A d\Omega
+\right)^\frac12\]
+
+Where $A:A$ is the Frobenius inner product.
+If $\|A\|$ or $\|A\|_e$ will be computed for
+some matrix field $A$, it may be advantageous
+to store the field $A:A$.
+
+\section{Size Field Computation}
+
+A per-element scalar size factor is computed based on
+the per-element error following this formula:
+
+\[h^\text{new}_e = h^\text{current}_e
+\|e_\epsilon\|^{-\frac{2}{2p+d}}_e
+\left(
+\frac
+{\hat{\eta}^2\|\epsilon^*\|^2}
+{\sum_{i=1}^n\|e_\epsilon\|^\frac{2d}{2p+d}_i}
+\right)^\frac{1}{2p}
+\]
+
+To which the following definitions apply:
+
+\begin{center}
+\begin{tabular}{ll}
+$d$ & element dimension \\
+$p$ & polynomial order of $f$ \\
+$\eta$ & $\frac{\|e_\epsilon\|}{\|\epsilon\|}$ \\
+$\hat{\eta}$ & threshold on $\eta$ for adaptivity \\
+$n$ & number of elements in the mesh \\
+$h_e^\text{current}$ & the current element size (longest edge) \\
+$h_e^\text{new}$ & the desired element size for adaptivity \\
+\end{tabular}
+\end{center}
+
+Finally, a linear isotropic size field at
+the vertices is recovered from the per-element
+size factors $h_e^\text{new}$ by a simple
+process of averaging the values from elements
+adjacent to a vertex.
+
+\section{Target Size Field Computation}
+
+In practical applications, it is desirable to target a specified
+number of elements $N$ during mesh adaption to avoid over-coarsening
+or over-refinement, and to avoid exhausting the memory on the available
+machine.
+
+Boussetta et al. ("Adaptive remeshing based on a posteriori error
+estimation for forging simulation") define a size field specification
+by the following:
+\[
+h^{new}_e = \left(
+\frac{\theta_{uni}}{\theta_e} \right)
+^{( \frac{2}{2p +d} )} h_e
+\]
+where $\theta_e$ is the element-wise contribution to the error,
+$\theta_{uni}$ is the value of a uniformly distributed error
+across the mesh, $h_e^{new}$ is the new element mesh size,
+$h_e$ is the old element mesh size, $p$ is the polynomial order
+of accuracy of the finite element method, and $d$ is the number
+of spatial dimensions of the mesh.
+
+Let $G$ be a globally computed error metric given by:
+\[
+G = \sum_e^n \left( \theta_e \right) ^{(\frac{2d}{2p+d})}
+\]
+where $n$ is the total number of elements in the mesh.
+Then value of the uniformly distributed error is given by
+\[
+\theta_{uni} = \left( \theta_{imp} \right) ^{( \frac{2p+d}{2p} )}
+\left( G \right) ^{-(\frac{2p+d}{4p} )}
+\]
+where $\theta_{imp}$ is a prescribed accuracy parameter. 
+To generate a size field that will yield an adapted
+mesh with approximately $N$ elements, the accuracy parameter
+$\theta_{imp}$ is given by
+\[
+\theta_{imp} = \left( N \right) ^{-(\frac{p}{d})}
+\left( G \right)^{(\frac{2p+d}{2d})}
+\]
+
+Algebraic manipulation of these quantities yields a simpler
+equivalent expression for the new element size field:
+\[
+h_e^{new} = \left(\frac{G}{N}\right)^{\frac{1}{d}}
+\left( \theta_e \right)^{-(\frac{2}{2p+d})} h_e
+\]
+The element-level error contribution $\theta_e$ is chosen to be
+\[
+\theta_e = \left( 
+\int_{\Omega^e}(\epsilon - \epsilon^*) : (\epsilon - \epsilon^*)
+\text{d} \Omega
+\right) ^{\frac{1}{2}}
+\]
+as is done in the previous size field computation.
+
+In addition to targeting a specified number of elements in the
+output mesh, Boussetta et al. define user-input parameters
+$\alpha$ and $\beta$ to control the gradients of the mesh size
+field such that
+\[
+\alpha < \frac{h_e^{new}}{h_e} < \beta
+\]
+
+\end{document}
