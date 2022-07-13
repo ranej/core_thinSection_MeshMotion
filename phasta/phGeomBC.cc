@@ -6,6 +6,7 @@
 #include <pcu_util.h>
 #include <lionPrint.h>
 #include <cstdlib>
+#include <iostream>
 
 namespace ph {
 
@@ -109,8 +110,9 @@ void getm2gb
   c.setSize(nelem * 3);
   size_t i = 0;
   for (int j = 0; j < 3; ++j)  
-    for (int elem = 0; elem < nelem; ++elem)
+    for (int elem = 0; elem < nelem; ++elem){
        c[i++] = o.arrays.m2gb[block][elem][j];
+    }
   PCU_ALWAYS_ASSERT(i == c.getSize());
 }
 
@@ -225,13 +227,6 @@ void writeBlocks(FILE* f, Output& o)
       getBoundaryMaterialType(o, i, c);
       ph_write_ints(f, phrase.c_str(), &c[0], c.getSize(), 1, params); 
     }
-//Debug Jitesh    
-    if (o.arrays.m2gb) {
-      phrase = getBlockKeyPhrase(k, "m2gb ");
-      getm2gb(o, i, c);
-      ph_write_ints(f, phrase.c_str(), &c[0], c.getSize(), 1, params); 
-    }
-//Debug Jitesh    
     phrase = getBlockKeyPhrase(k, "nbc codes ");
     apf::DynamicArray<int> codes;
     getNaturalBCCodes(o, i, codes);
@@ -240,6 +235,14 @@ void writeBlocks(FILE* f, Output& o)
     apf::DynamicArray<double> values;
     getNaturalBCValues(o, i, values);
     ph_write_doubles(f, phrase.c_str(), &values[0], values.getSize(), 8, params);
+//Debug Jitesh    
+    if (o.arrays.m2gb) {
+      phrase = getBlockKeyPhrase(k, "m2gb ");
+      params[1] = 3;
+      getm2gb(o, i, c);
+      ph_write_ints(f, phrase.c_str(), &c[0], c.getSize(), 2, params); 
+    }
+//Debug Jitesh    
   }
   for (int i = 0; i < o.blocks.interface.getSize(); ++i) {
     BlockKeyInterface& k = o.blocks.interface.keys[i];

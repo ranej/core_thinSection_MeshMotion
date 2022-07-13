@@ -369,18 +369,6 @@ static void getRigidBody(Output& o, BCs& bcs, apf::Numbering* n) {
           lion_eprint(1,"not support multiple rigid bodies on one mesh vertex\n");
         }
         else if (f[vID] == -1) {
-// add to map if not find
-        rit = rbIDmap.find(rbID);
-        if(rit == rbIDmap.end()) {
-          rbIDmap[rbID] = rbMT;
-          PCU_Comm_Pack(0, &rbID, sizeof(int));
-          PCU_Comm_Pack(0, &rbMT, sizeof(int));
-        }
-        int vID = apf::getNumber(n, e, 0, 0);
-        if(f[vID] > -1 && f[vID] != rbID) {
-          lion_eprint(1,"not support multiple rigid bodies on one mesh vertex\n");
-        }
-        else if (f[vID] == -1) {
           f[vID] = rbID;
         }
       }
@@ -425,7 +413,6 @@ static void getRigidBody(Output& o, BCs& bcs, apf::Numbering* n) {
   o.arrays.rigidBodyTag = f;
 }
 
-}
 bool checkInterface(Output& o, BCs& bcs) {
   if (o.hasDGInterface == 0)
     return false;
@@ -843,7 +830,7 @@ static void getTSEssentialBCs(Output& o, apf::Numbering* n)
   if(!in.ensa_melas_dof)
     return;
   std::cout << "getTSBCs_PCU \n";
-//  PCU_Comm_Begin();
+  PCU_Comm_Begin();
   std::cout << "after getTSBCs \n";
   int nec = countEssentialBCs(in);
   int& ei = o.nEssentialBCNodes;
@@ -1182,5 +1169,4 @@ void generateOutput(Input& in, BCs& bcs, apf::Mesh* mesh, Output& o)
   if (!PCU_Comm_Self())
     lion_oprint(1,"generated output structs in %f seconds\n",t1 - t0);
 }
-
 }

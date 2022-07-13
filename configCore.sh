@@ -1,4 +1,4 @@
-flags=" -O3 -DNDEBUG -Wall -Wextra"
+flags=" -O3 -DNDEBUG -Wall -g -Wextra"
 
 cmake .. \
    -DCMAKE_C_COMPILER="mpicc" \
@@ -14,6 +14,7 @@ cmake .. \
    -DPCU_COMPRESS=OFF \
    -DPUMI_FORTRAN_INTERFACE=ON \
    -DCMAKE_Fortran_COMPILER="mpif90" \
+   -DCMAKE_BUILD_TYPE=Debug\
 ..
 make -j24
 make install
