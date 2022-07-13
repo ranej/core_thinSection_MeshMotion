@@ -1035,8 +1035,6 @@ static void getEdges(Output& o, apf::Numbering* vn, apf::Numbering* rn, BCs& bcs
 Output::~Output()
 {
   
-  if (!PCU_Comm_Self())
-    lion_oprint(1,"deleting arrays \n");
   delete [] arrays.coordinates;
   delete [] arrays.ilwork;
   delete [] arrays.ilworkf;
@@ -1052,8 +1050,6 @@ Output::~Output()
   delete [] arrays.ien;
   if (arrays.mattype) delete [] arrays.mattype;
   Blocks& bbs = blocks.boundary;
-  if (!PCU_Comm_Self())
-    lion_oprint(1,"deleting boundary arrays \n");
   for (int i = 0; i < bbs.getSize(); ++i) {
     for (int j = 0; j < bbs.nElements[i]; ++j) {
       delete [] arrays.ienb[i][j];
@@ -1078,8 +1074,6 @@ Output::~Output()
     delete [] arrays.bc[i];
   delete [] arrays.bc;
   delete [] arrays.ienneigh;
-  if (!PCU_Comm_Self())
-    lion_oprint(1,"done deleting boundary arrays \n");
   BlocksInterface& ifbs = blocks.interface;
   for (int i = 0; i < ifbs.getSize(); ++i) {
     for (int j = 0; j < ifbs.nElements[i]; ++j) {
@@ -1095,8 +1089,6 @@ Output::~Output()
   delete [] arrays.ienif1;
   if (arrays.mattypeif0) delete [] arrays.mattypeif0;
   if (arrays.mattypeif1) delete [] arrays.mattypeif1;
-  if (!PCU_Comm_Self())
-    lion_oprint(1,"done deleting mattypeif \n");
   delete [] arrays.ilworkl;
   delete [] arrays.iel;
   delete [] arrays.ileo;
@@ -1107,20 +1099,10 @@ Output::~Output()
     delete [] arrays.m2gClsfcn;
     delete [] arrays.m2gParCoord;
   }
-  if (!PCU_Comm_Self())
-    lion_oprint(1,"done deleting m2g \n");
   delete [] arrays.interfaceFlag;
-  if (!PCU_Comm_Self())
-    lion_oprint(1,"done deleting interfaceFlag \n");
   delete [] arrays.rigidBodyIDs;
-  if (!PCU_Comm_Self())
-    lion_oprint(1,"done deleting rigidBodyIDs \n");
   delete [] arrays.rigidBodyMTs;
-  if (!PCU_Comm_Self())
-    lion_oprint(1,"done deleting rigidBodyMTs \n");
   delete [] arrays.rigidBodyTag;
-  if (!PCU_Comm_Self())
-    lion_oprint(1,"all arrays deleted \n");
 }
 
 void generateOutput(Input& in, BCs& bcs, apf::Mesh* mesh, Output& o)

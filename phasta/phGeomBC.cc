@@ -238,7 +238,7 @@ void writeBlocks(FILE* f, Output& o)
 //Debug Jitesh    
     if (o.arrays.m2gb) {
       phrase = getBlockKeyPhrase(k, "m2gb ");
-      params[1] = 3;
+      params[1] = 3; //1 = ftag, 2 = rtag, 3 = usage (for now)
       getm2gb(o, i, c);
       ph_write_ints(f, phrase.c_str(), &c[0], c.getSize(), 2, params); 
     }
