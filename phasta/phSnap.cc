@@ -161,6 +161,8 @@ void core_get_surf_normal (int flag, int f_tag, int e_tag, int v_tag, double par
   int e_dim = 1;
   int v_dim = 0;
   n1 = 0;
+  n2 = 0;
+  n3 = 0;
   apf::ModelEntity* f  = m->findModelEntity(f_dim, f_tag);
 
   if(flag == 1) {//GFace
