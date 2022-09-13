@@ -165,17 +165,19 @@ void core_get_surf_normal (int flag, int f_tag, int e_or_v_tag, double par1, dou
   n3 = 0;
   apf::ModelEntity* f  = m->findModelEntity(f_dim, f_tag);
 
-  if(flag == 1) {//GFace
+
+//flag here is same value as m2gClsfcn(i,1), i.e., 0 = vertex, 1 = edge, 2 = face
+  if(flag == 2) {//GFace
     fpar[0] = par1;
     fpar[1] = par2;
-  }else if(flag == 2) { //GEdge
+  }else if(flag == 1) { //GEdge
     apf::ModelEntity* e  = m->findModelEntity(e_dim, e_or_v_tag);
     if(GE_dirUsed(reinterpret_cast<pGEdge>(e), reinterpret_cast<pGFace>(f)) == 2){
       cout << "core_get_surf_normal: Seam GEdge encountered, which is not allowed"<<endl;
       exit(EXIT_FAILURE);     
     }
     GF_edgeReparam(reinterpret_cast<pGFace>(f), reinterpret_cast<pGEdge>(e), par1, 0, fpar);	
-  }else if(flag == 3) { //GVertex
+  }else if(flag == 0) { //GVertex
     apf::ModelEntity* v  = m->findModelEntity(v_dim, e_or_v_tag);
     GF_vertexReparam(reinterpret_cast<pGFace>(f), reinterpret_cast<pGVertex>(v), fpar);
   }else{
