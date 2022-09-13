@@ -26,12 +26,22 @@ c
           real(c_double),intent(out),dimension(:) ::
      &                               px(numnp), py(numnp), pz(numnp)
         end subroutine
+
         subroutine core_is_in_closure ( e_dim, e_tag,
      &                                  t_dim, t_tag, answer )
      &    bind(C, NAME='core_is_in_closure')
         use iso_c_binding
           integer(c_int),intent(in),value :: e_dim, e_tag, t_dim, t_tag
           integer(c_int),intent(out) :: answer
+        end subroutine
+
+        subroutine core_get_surf_normal (flag,f_tag, e_tag, v_tag, par1,
+     &           par2, n1, n2, n3)
+     &    bind(C, NAME='core_get_surf_normal')
+        use iso_c_binding
+          integer(c_int),intent(in),value :: flag,f_tag, e_tag, v_tag
+          real(c_double),intent(in) :: par1, par2
+          real(c_double),intent(out) :: n1, n2, n3
         end subroutine
 c
       end interface
