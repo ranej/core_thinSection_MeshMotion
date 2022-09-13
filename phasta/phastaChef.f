@@ -35,7 +35,7 @@ c
           integer(c_int),intent(out) :: answer
         end subroutine
 
-        subroutine core_get_surf_normal (flag,f_tag, e_tag, v_tag, par1,
+        subroutine core_get_surf_normal (flag,f_tag, e_or_v_tag, par1,
      &           par2, n1, n2, n3)
      &    bind(C, NAME='core_get_surf_normal')
         use iso_c_binding

@@ -150,7 +150,7 @@ void core_is_in_closure (int e_dim, int e_tag, int t_dim, int t_tag, int& answer
   PCU_ALWAYS_ASSERT(answer == 0 || answer == 1);
 }
 
-void core_get_surf_normal (int flag, int f_tag, int e_tag, int v_tag, double par1, double par2, 
+void core_get_surf_normal (int flag, int f_tag, int e_or_v_tag, double par1, double par2, 
 			   double &n1, double &n2, double &n3) {
 
 //input: flag, f_tag, e_tag, v_tag, par1, par2
@@ -169,14 +169,14 @@ void core_get_surf_normal (int flag, int f_tag, int e_tag, int v_tag, double par
     fpar[0] = par1;
     fpar[1] = par2;
   }else if(flag == 2) { //GEdge
-    apf::ModelEntity* e  = m->findModelEntity(e_dim, e_tag);
+    apf::ModelEntity* e  = m->findModelEntity(e_dim, e_or_v_tag);
     if(GE_dirUsed(reinterpret_cast<pGEdge>(e), reinterpret_cast<pGFace>(f)) == 2){
       cout << "core_get_surf_normal: Seam GEdge encountered, which is not allowed"<<endl;
       exit(EXIT_FAILURE);     
     }
     GF_edgeReparam(reinterpret_cast<pGFace>(f), reinterpret_cast<pGEdge>(e), par1, 0, fpar);	
   }else if(flag == 3) { //GVertex
-    apf::ModelEntity* v  = m->findModelEntity(v_dim, v_tag);
+    apf::ModelEntity* v  = m->findModelEntity(v_dim, e_or_v_tag);
     GF_vertexReparam(reinterpret_cast<pGFace>(f), reinterpret_cast<pGVertex>(v), fpar);
   }else{
     cout << "core_get_surf_normal: Wrong flag is set. Allowed values are 1,2,3 only"<<endl;
