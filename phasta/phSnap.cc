@@ -150,8 +150,7 @@ void core_is_in_closure (int e_dim, int e_tag, int t_dim, int t_tag, int& answer
   PCU_ALWAYS_ASSERT(answer == 0 || answer == 1);
 }
 
-void core_get_surf_normal (int flag, int f_tag, int e_or_v_tag, double par1, double par2, 
-			   double &n1, double &n2, double &n3) {
+void core_get_surf_normal (int flag, int f_tag, int e_or_v_tag, double par1, double par2,  double &n1, double &n2, double &n3) {
 
 //input: flag, f_tag, e_tag, v_tag, par1, par2
 //output: unit normals n1, n2, n3
