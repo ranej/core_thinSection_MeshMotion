@@ -40,7 +40,7 @@ c
      &    bind(C, NAME='core_get_surf_normal')
         use iso_c_binding
           integer(c_int),intent(in),value :: flag,f_tag, e_or_v_tag
-          real(c_double),intent(in) :: par1, par2
+          real(c_double),intent(in),value :: par1, par2
           real(c_double),intent(out) :: n1, n2, n3
         end subroutine
 c
